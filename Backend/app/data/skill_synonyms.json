@@ -1,0 +1,18 @@
+{
+  "js": "JavaScript",
+  "javascript": "JavaScript",
+  "node": "Node.js",
+  "nodejs": "Node.js",
+  "node.js": "Node.js",
+  "ts": "TypeScript",
+  "typescript": "TypeScript",
+  "k8s": "Kubernetes",
+  "kubernetes": "Kubernetes",
+  "postgres": "PostgreSQL",
+  "postgresql": "PostgreSQL",
+  "py": "Python",
+  "python": "Python",
+  "react.js": "React",
+  "reactjs": "React",
+  "react": "React"
+}

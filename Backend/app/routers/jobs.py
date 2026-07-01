@@ -59,6 +59,9 @@ async def create_job(job_in: JobCreate, db: AsyncSession = Depends(get_db)):
     except Exception as e:
         import logging
         logging.getLogger(__name__).warning("Failed to generate/save job embedding for job_id=%d: %s", job.id, str(e))
+        job.status = JobStatus.DRAFT
+        await db.commit()
+        await db.refresh(job)
 
     return job
 

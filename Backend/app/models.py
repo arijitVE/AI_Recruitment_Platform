@@ -11,6 +11,7 @@ from sqlalchemy import (
     DateTime,
     JSON,
     Enum as SAEnum,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import relationship
 from app.database import Base
@@ -33,7 +34,9 @@ class CandidateStatus(str, enum.Enum):
     COMPLETED = "completed"
     PARSING_FAILED = "parsing_failed"
     EXTRACTION_FAILED = "extraction_failed"
+    SANITIZATION_FAILED = "sanitization_failed"
     EMBEDDING_FAILED = "embedding_failed"
+    MATCHING_FAILED = "matching_failed"
     NEEDS_MANUAL_REVIEW = "needs_manual_review"
 
 
@@ -72,6 +75,7 @@ class Candidate(Base):
     original_filename = Column(String(255), nullable=False)
     raw_file_storage_path = Column(String(512), nullable=False)
     parsed_markdown = Column(Text, nullable=True)
+    raw_markdown = Column(Text, nullable=True)       # Exact Docling output, stored for diagnostics
     structured_profile = Column(JSON, nullable=True)  # Unredacted profile with name/PII
     sanitized_profile = Column(JSON, nullable=True)   # Redacted profile without PII
     profile_text = Column(Text, nullable=True)        # Exact rendered text embedded
@@ -88,6 +92,7 @@ class Candidate(Base):
 
 class Score(Base):
     __tablename__ = "scores"
+    __table_args__ = (UniqueConstraint("job_id", "candidate_id", name="uq_score_job_candidate"),)
 
     id = Column(Integer, primary_key=True, index=True)
     job_id = Column(Integer, ForeignKey("jobs.id", ondelete="CASCADE"), nullable=False, index=True)

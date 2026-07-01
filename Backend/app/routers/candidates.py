@@ -61,17 +61,25 @@ async def upload_candidate(
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
-    file_path = await save_uploaded_file(file, job_id)
+    try:
+        file_path, original_filename = await save_uploaded_file(file, job_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    candidate = Candidate(
-        job_id=job_id,
-        original_filename=file.filename,
-        raw_file_storage_path=file_path,
-        status=CandidateStatus.UPLOADED
-    )
-    db.add(candidate)
-    await db.commit()
-    await db.refresh(candidate)
+    try:
+        candidate = Candidate(
+            job_id=job_id,
+            original_filename=original_filename,
+            raw_file_storage_path=file_path,
+            status=CandidateStatus.UPLOADED
+        )
+        db.add(candidate)
+        await db.commit()
+        await db.refresh(candidate)
+    except Exception:
+        from pathlib import Path
+        Path(file_path).unlink(missing_ok=True)
+        raise
 
     logger.info("[Route] Queued background pipeline for candidate_id=%d (job_id=%d)", candidate.id, job_id)
     background_tasks.add_task(process_candidate_task, candidate.id)
@@ -92,7 +100,9 @@ async def retry_candidate_pipeline(
     if cand.status not in (
         CandidateStatus.PARSING_FAILED,
         CandidateStatus.EXTRACTION_FAILED,
+        CandidateStatus.SANITIZATION_FAILED,
         CandidateStatus.EMBEDDING_FAILED,
+        CandidateStatus.MATCHING_FAILED,
         CandidateStatus.UPLOADED,
     ):
         raise HTTPException(
@@ -100,7 +110,6 @@ async def retry_candidate_pipeline(
             detail=f"Cannot retry candidate in status '{cand.status.value}'. Only failed/uploaded candidates can be retried."
         )
 
-    cand.status = CandidateStatus.UPLOADED
     cand.status_detail = None
     await db.commit()
     await db.refresh(cand)

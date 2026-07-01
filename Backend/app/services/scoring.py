@@ -8,6 +8,7 @@ from app.models import Job, Candidate, Score, CandidateStatus
 from app.schemas import SanitizedProfile
 from app.services.llm import evaluate_candidate_fit_llm, StrictScoringResult, get_client
 from app.services.worker import record_audit_log
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +20,8 @@ async def evaluate_candidate_fit(job: Job, sanitized: SanitizedProfile) -> Stric
     """Stage-2 LLM scoring. Falls back to deterministic skill-match if OpenAI unavailable."""
     c = get_client()
     if not c:
+        if not settings.ALLOW_DEVELOPMENT_FALLBACKS:
+            raise RuntimeError("OpenAI is not configured for candidate scoring")
         logger.warning("[Scoring] client=None — deterministic skill-match fallback for job_id=%s.", job.id)
         return _skill_match_fallback(job, sanitized, reason="no OpenAI client")
 
@@ -26,6 +29,8 @@ async def evaluate_candidate_fit(job: Job, sanitized: SanitizedProfile) -> Stric
         result = await evaluate_candidate_fit_llm(job, sanitized)
         return result
     except Exception as e:
+        if not settings.ALLOW_DEVELOPMENT_FALLBACKS:
+            raise
         logger.error("[Scoring] OpenAI scoring failed (job_id=%s): %s — using fallback.", job.id, str(e))
         return _skill_match_fallback(job, sanitized, reason=str(e))
 

@@ -106,6 +106,8 @@ async def extract_structured_profile(resume_markdown: str) -> CandidateProfile:
     """Extract full structured profile from parsed resume markdown using OpenAI structured outputs."""
     c = get_client()
     if not c:
+        if not settings.ALLOW_DEVELOPMENT_FALLBACKS:
+            raise RuntimeError("OpenAI is not configured for resume extraction")
         logger.warning("[LLM] extract_structured_profile: client=None, returning mock profile.")
         return CandidateProfile(
             full_name="Alex Rivera (Mock)",
@@ -231,6 +233,8 @@ async def generate_interview_questions(
     """Generate targeted interview questions based on job requirements and candidate skill gaps."""
     c = get_client()
     if not c:
+        if not settings.ALLOW_DEVELOPMENT_FALLBACKS:
+            raise RuntimeError("OpenAI is not configured for interview question generation")
         logger.warning("[LLM] generate_interview_questions: client=None, returning mock questions.")
         questions = []
         for gap in missing_skills[:3]:

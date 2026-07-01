@@ -111,6 +111,7 @@ class CandidateResponse(BaseModel):
 class CandidateDetailResponse(CandidateResponse):
     structured_profile: Optional[CandidateProfile] = None
     parsed_markdown: Optional[str] = None
+    raw_markdown: Optional[str] = None
 
     @field_validator("structured_profile", mode="before")
     @classmethod

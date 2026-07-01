@@ -34,6 +34,8 @@ async def generate_embedding(text: str) -> List[float]:
     """Generate embedding vector for clean rendered profile text using OpenAI embeddings API."""
     c = get_embed_client()
     if not c:
+        if not settings.ALLOW_DEVELOPMENT_FALLBACKS:
+            raise RuntimeError("OpenAI is not configured for embedding generation")
         logger.warning("[VectorStore] generate_embedding: using deterministic pseudo-embedding.")
         # Deterministic pseudo-embedding for testing (dimension 1536)
         h = hashlib.sha256(text.encode("utf-8")).digest()
@@ -65,6 +67,7 @@ class VectorStoreService:
             settings.PINECONE_API_KEY and settings.PINECONE_API_KEY != "test_key"
         )
         self.index = None
+        self.initialization_error: str | None = None
         if self.use_pinecone:
             self._connect()
 
@@ -107,6 +110,7 @@ class VectorStoreService:
 
         except Exception as e:
             logger.warning("[VectorStore] Pinecone init failed: %s — falling back to in-memory store.", str(e))
+            self.initialization_error = str(e)
             self.use_pinecone = False
             self.index = None
 
@@ -121,7 +125,13 @@ class VectorStoreService:
                 logger.info("[VectorStore] Upserted vector %s to Pinecone namespace %s.", vector_id, namespace)
                 return
             except Exception as e:
+                if not settings.ALLOW_DEVELOPMENT_FALLBACKS:
+                    raise RuntimeError(f"Pinecone upsert failed: {e}") from e
                 logger.warning("[VectorStore] Pinecone upsert failed: %s — falling back.", str(e))
+
+        if not settings.ALLOW_DEVELOPMENT_FALLBACKS:
+            detail = f": {self.initialization_error}" if self.initialization_error else ""
+            raise RuntimeError(f"Pinecone is unavailable{detail}")
 
         # Local fallback
         if namespace not in _local_vector_store:
@@ -152,7 +162,13 @@ class VectorStoreService:
                 logger.info("[VectorStore] Pinecone returned %d matches.", len(matches))
                 return matches
             except Exception as e:
+                if not settings.ALLOW_DEVELOPMENT_FALLBACKS:
+                    raise RuntimeError(f"Pinecone query failed: {e}") from e
                 logger.warning("[VectorStore] Pinecone query failed: %s — falling back to local.", str(e))
+
+        if not settings.ALLOW_DEVELOPMENT_FALLBACKS:
+            detail = f": {self.initialization_error}" if self.initialization_error else ""
+            raise RuntimeError(f"Pinecone is unavailable{detail}")
 
         # Local fallback cosine similarity search
         ns_data = _local_vector_store.get(namespace, {})

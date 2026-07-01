@@ -48,3 +48,5 @@ out/
 
 
 data
+!Backend/app/data/
+!Backend/app/data/skill_synonyms.json
