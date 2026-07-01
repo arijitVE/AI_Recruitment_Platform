@@ -1,0 +1,11 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "recruitment-platform-backend"
+version = "0.1.0"
+description = "Backend application for AI Recruitment Platform"
+
+[tool.setuptools]
+packages = ["app"]
