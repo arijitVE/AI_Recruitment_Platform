@@ -16,21 +16,22 @@ logger = logging.getLogger(__name__)
 # been fully resolved from .env by this point.
 # If the key is missing/test, every function falls through to its mock path.
 
-def _build_client() -> AsyncOpenAI | None:
-    key = settings.OPENAI_API_KEY
-    if key and key != "test_key":
-        logger.info("[LLM] OpenAI client ready (key prefix: %s...)", key[:12])
-        return AsyncOpenAI(api_key=key)
-    logger.warning("[LLM] OPENAI_API_KEY is '%s' — all LLM calls will use mock fallbacks.", key)
-    return None
-
-
-client: AsyncOpenAI | None = _build_client()
+_cached_client: AsyncOpenAI | None | str = "unset"
 
 
 def get_client() -> AsyncOpenAI | None:
-    """Return the module-level client (used by scoring.py etc.)."""
-    return client
+    """Return dynamic AsyncOpenAI client based on settings.OPENAI_API_KEY."""
+    global _cached_client
+    key = settings.OPENAI_API_KEY
+    if not key or key == "test_key":
+        return None
+    if _cached_client == "unset" or _cached_client is None or getattr(_cached_client, "api_key", None) != key:
+        logger.info("[LLM] Initializing OpenAI client (key prefix: %s...)", key[:12])
+        _cached_client = AsyncOpenAI(api_key=key)
+    return _cached_client
+
+
+client = get_client()
 
 
 # ── OpenAI-strict schemas (no Optional / anyOf — rejected by strict mode) ────
@@ -103,7 +104,8 @@ def _truncate(text: str, max_chars: int = _MAX_RESUME_CHARS) -> str:
 
 async def extract_structured_profile(resume_markdown: str) -> CandidateProfile:
     """Extract full structured profile from parsed resume markdown using OpenAI structured outputs."""
-    if not client:
+    c = get_client()
+    if not c:
         logger.warning("[LLM] extract_structured_profile: client=None, returning mock profile.")
         return CandidateProfile(
             full_name="Alex Rivera (Mock)",
@@ -141,7 +143,7 @@ async def extract_structured_profile(resume_markdown: str) -> CandidateProfile:
 
     logger.info("[LLM] Calling gpt-4o-mini for structured profile extraction (%d chars).", len(safe_markdown))
     try:
-        response = await client.beta.chat.completions.parse(
+        response = await c.beta.chat.completions.parse(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "You are an expert HR recruitment parser. Extract strict structured data."},
@@ -183,7 +185,8 @@ async def extract_structured_profile(resume_markdown: str) -> CandidateProfile:
 
 async def evaluate_candidate_fit_llm(job: Job, sanitized: SanitizedProfile) -> StrictScoringResult:
     """Stage-2 LLM scoring. Raises RuntimeError on failure — caller handles fallback."""
-    if not client:
+    c = get_client()
+    if not c:
         raise RuntimeError("No OpenAI client available")
 
     prompt = (
@@ -205,7 +208,7 @@ async def evaluate_candidate_fit_llm(job: Job, sanitized: SanitizedProfile) -> S
     )
 
     logger.info("[LLM] Calling gpt-4o for candidate scoring (job_id=%s).", job.id)
-    response = await client.beta.chat.completions.parse(
+    response = await c.beta.chat.completions.parse(
         model="gpt-4o",
         messages=[
             {"role": "system", "content": "You are an objective, bias-free AI recruitment evaluator."},
@@ -226,7 +229,8 @@ async def generate_interview_questions(
     num_questions: int = 5
 ) -> List[Dict[str, str]]:
     """Generate targeted interview questions based on job requirements and candidate skill gaps."""
-    if not client:
+    c = get_client()
+    if not c:
         logger.warning("[LLM] generate_interview_questions: client=None, returning mock questions.")
         questions = []
         for gap in missing_skills[:3]:
@@ -257,7 +261,7 @@ async def generate_interview_questions(
 
     logger.info("[LLM] Calling gpt-4o-mini for interview question generation (job_id=%s, n=%d).", job.id, num_questions)
     try:
-        response = await client.beta.chat.completions.parse(
+        response = await c.beta.chat.completions.parse(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "You are an expert technical interviewer generating tailored questions."},

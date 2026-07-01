@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from app.database import async_session_maker
-from app.models import Candidate, CandidateStatus, AuditLog
+from app.models import Candidate, CandidateStatus, AuditLog, Job
 from app.services.parser import parse_resume_file
 from app.services.llm import extract_structured_profile
 from app.services.redaction import sanitize_profile
@@ -101,4 +101,33 @@ async def process_candidate_task(candidate_id: int):
         except Exception as e:
             candidate.status = CandidateStatus.EMBEDDING_FAILED
             candidate.status_detail = str(e)
+            await db.commit()
+            return
+
+        # Step 5: Automatic Similarity matching & Stage-2 LLM scoring
+        try:
+            candidate.status = CandidateStatus.MATCHING
+            await db.commit()
+
+            j_res = await db.execute(select(Job).where(Job.id == job_id))
+            job = j_res.scalar_one_or_none()
+            if not job:
+                raise RuntimeError(f"Job id {job_id} not found during matching")
+
+            job_text = job.profile_text or f"Title: {job.title}\nSkills: {', '.join(job.required_skills or [])}"
+            job_vector = await generate_embedding(job_text)
+
+            matches = await vector_store.query_vectors(namespace=str(job_id), query_vector=job_vector, top_k=50)
+            sim_score = 0.5
+            for m in matches:
+                meta = m.get("metadata", {})
+                if meta.get("candidate_id") == candidate.id or m.get("vector_id") == candidate.pinecone_vector_id:
+                    sim_score = m.get("score", 0.5)
+                    break
+
+            from app.services.scoring import run_stage2_scoring
+            await run_stage2_scoring(db, job, candidate, sim_score)
+        except Exception as e:
+            candidate.status = CandidateStatus.EXTRACTION_FAILED
+            candidate.status_detail = f"Scoring error: {str(e)}"
             await db.commit()

@@ -6,11 +6,17 @@ from app.database import engine, Base
 from app.routers import jobs, candidates
 
 
+from sqlalchemy import text
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Create tables on startup if they don't exist
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        try:
+            await conn.execute(text("ALTER TABLE jobs ADD COLUMN pinecone_vector_id VARCHAR(255)"))
+        except Exception:
+            pass
     yield
 
 

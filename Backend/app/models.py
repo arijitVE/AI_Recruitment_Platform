@@ -53,6 +53,7 @@ class Job(Base):
     required_experience_years = Column(Integer, nullable=True)
     required_education = Column(Text, nullable=True)
     profile_text = Column(Text, nullable=True)  # Rendered job requirement text
+    pinecone_vector_id = Column(String(255), nullable=True)
     status = Column(SAEnum(JobStatus), default=JobStatus.OPEN, nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
     created_by = Column(Integer, nullable=True)

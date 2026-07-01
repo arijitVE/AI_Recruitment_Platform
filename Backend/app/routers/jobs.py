@@ -34,6 +34,32 @@ async def create_job(job_in: JobCreate, db: AsyncSession = Depends(get_db)):
     db.add(job)
     await db.commit()
     await db.refresh(job)
+
+    # Automatically create embeddings and save in vector DB
+    try:
+        from app.services.vector_store import generate_embedding, vector_store
+        import logging
+        vector = await generate_embedding(job.profile_text or job.raw_description)
+        vector_id = f"job_{job.id}"
+        await vector_store.upsert_vector(
+            namespace=str(job.id),
+            vector_id=vector_id,
+            vector=vector,
+            metadata={"job_id": job.id, "type": "job", "title": job.title}
+        )
+        await vector_store.upsert_vector(
+            namespace="jobs",
+            vector_id=vector_id,
+            vector=vector,
+            metadata={"job_id": job.id, "type": "job", "title": job.title}
+        )
+        job.pinecone_vector_id = vector_id
+        await db.commit()
+        await db.refresh(job)
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning("Failed to generate/save job embedding for job_id=%d: %s", job.id, str(e))
+
     return job
 
 

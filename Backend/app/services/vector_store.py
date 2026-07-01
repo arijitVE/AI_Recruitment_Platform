@@ -15,19 +15,14 @@ _local_vector_store: Dict[str, Dict[str, Any]] = {}
 _embed_client: AsyncOpenAI | None | str = "unset"  # sentinel
 
 
-def _get_embed_client() -> AsyncOpenAI | None:
-    key = settings.OPENAI_API_KEY
-    if key and key != "test_key":
-        logger.info("[VectorStore] OpenAI embedding client initialized with real API key.")
-        return AsyncOpenAI(api_key=key)
-    logger.warning("[VectorStore] No real OpenAI API key — using pseudo-embedding fallback.")
-    return None
-
-
 def get_embed_client() -> AsyncOpenAI | None:
     global _embed_client
-    if _embed_client == "unset":
-        _embed_client = _get_embed_client()
+    key = settings.OPENAI_API_KEY
+    if not key or key == "test_key":
+        return None
+    if _embed_client == "unset" or _embed_client is None or getattr(_embed_client, "api_key", None) != key:
+        logger.info("[VectorStore] OpenAI embedding client initialized with real API key.")
+        _embed_client = AsyncOpenAI(api_key=key)
     return _embed_client
 
 

@@ -177,7 +177,7 @@ async def get_rankings(job_id: int, db: AsyncSession = Depends(get_db)):
     """Return candidates ranked by fit_percentage descending."""
     query = (
         select(Candidate, Score)
-        .join(Score, Candidate.id == Score.candidate_id)
+        .outerjoin(Score, Candidate.id == Score.candidate_id)
         .where(Candidate.job_id == job_id)
         .order_by(Score.fit_percentage.desc(), Score.vector_similarity_score.desc())
     )
@@ -189,11 +189,11 @@ async def get_rankings(job_id: int, db: AsyncSession = Depends(get_db)):
                 candidate_id=cand.id,
                 original_filename=cand.original_filename,
                 status=cand.status,
-                fit_percentage=score.fit_percentage or 0,
-                vector_similarity_score=score.vector_similarity_score,
-                matched_skills=score.matched_skills or [],
-                missing_skills=score.missing_skills or [],
-                rationale=score.rationale,
+                fit_percentage=score.fit_percentage if score and score.fit_percentage is not None else 0,
+                vector_similarity_score=score.vector_similarity_score if score else None,
+                matched_skills=score.matched_skills if score and score.matched_skills else [],
+                missing_skills=score.missing_skills if score and score.missing_skills else [],
+                rationale=score.rationale if score else None,
             )
         )
     return results

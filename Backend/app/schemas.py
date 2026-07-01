@@ -1,6 +1,7 @@
 from datetime import datetime
+import json
 from typing import Any, List, Optional
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 from app.models import JobStatus, CandidateStatus, DecisionStatus
 
 
@@ -21,10 +22,21 @@ class JobResponse(BaseModel):
     required_skills: List[str]
     required_experience_years: Optional[int]
     required_education: Optional[str]
-    profile_text: Optional[str]
+    profile_text: Optional[str] = None
+    pinecone_vector_id: Optional[str] = None
     status: JobStatus
     created_at: datetime
-    created_by: Optional[int]
+    created_by: Optional[int] = None
+
+    @field_validator("required_skills", mode="before")
+    @classmethod
+    def parse_json_fields(cls, v):
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except Exception:
+                return v
+        return v
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -79,16 +91,36 @@ class CandidateResponse(BaseModel):
     job_id: int
     original_filename: str
     status: CandidateStatus
-    status_detail: Optional[str]
-    sanitized_profile: Optional[SanitizedProfile]
+    status_detail: Optional[str] = None
+    sanitized_profile: Optional[SanitizedProfile] = None
     created_at: datetime
+
+    @field_validator("sanitized_profile", mode="before")
+    @classmethod
+    def parse_sanitized(cls, v):
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except Exception:
+                return v
+        return v
 
     model_config = ConfigDict(from_attributes=True)
 
 
 class CandidateDetailResponse(CandidateResponse):
-    structured_profile: Optional[CandidateProfile]
-    parsed_markdown: Optional[str]
+    structured_profile: Optional[CandidateProfile] = None
+    parsed_markdown: Optional[str] = None
+
+    @field_validator("structured_profile", mode="before")
+    @classmethod
+    def parse_structured(cls, v):
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except Exception:
+                return v
+        return v
 
 
 # Scoring & Ranking Schemas
@@ -100,8 +132,18 @@ class ScoreResponse(BaseModel):
     fit_percentage: Optional[int]
     matched_skills: List[str]
     missing_skills: List[str]
-    rationale: Optional[str]
+    rationale: Optional[str] = None
     scored_at: datetime
+
+    @field_validator("matched_skills", "missing_skills", mode="before")
+    @classmethod
+    def parse_skills_json(cls, v):
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except Exception:
+                return v
+        return v
 
     model_config = ConfigDict(from_attributes=True)
 
