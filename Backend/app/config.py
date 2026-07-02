@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     PINECONE_INDEX_NAME: str = "recruitment-platform"
     STORAGE_PATH: str = "./data/resumes"
     MAX_UPLOAD_BYTES: int = 10 * 1024 * 1024
-    CORS_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000"
+    CORS_ORIGINS: str = "*"
     ALLOW_DEVELOPMENT_FALLBACKS: bool = False
     SUPABASE_URL: str = ""
     SUPABASE_KEY: str = ""
@@ -41,7 +41,10 @@ if "postgresql+asyncpg://" in settings.DATABASE_URL and "sslmode=" in settings.D
 
 
 def get_cors_origins() -> list[str]:
-    return [origin.strip() for origin in settings.CORS_ORIGINS.split(",") if origin.strip()]
+    origins = [origin.strip() for origin in settings.CORS_ORIGINS.split(",") if origin.strip()]
+    if "*" in origins or not origins:
+        return ["*"]
+    return origins
 
 # Resolve relative SQLite URLs consistently against Backend. SQLAlchemy's
 # sqlite:///./file.db form is otherwise relative to the shell's current folder.
