@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     MAX_UPLOAD_BYTES: int = 10 * 1024 * 1024
     CORS_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000"
     ALLOW_DEVELOPMENT_FALLBACKS: bool = False
+    SUPABASE_URL: str = ""
+    SUPABASE_KEY: str = ""
+    SUPABASE_STORAGE_BUCKET: str = "resumes"
 
     model_config = SettingsConfigDict(
         env_file=(".env", str(BACKEND_DIR / ".env")),
@@ -26,6 +29,15 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+# Automatically format connection strings for SQLAlchemy asyncpg driver when connecting to Neon/Postgres
+if settings.DATABASE_URL.startswith("postgresql://") and not settings.DATABASE_URL.startswith("postgresql+asyncpg://"):
+    settings.DATABASE_URL = settings.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+elif settings.DATABASE_URL.startswith("postgres://") and not settings.DATABASE_URL.startswith("postgresql+asyncpg://"):
+    settings.DATABASE_URL = settings.DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
+
+if "postgresql+asyncpg://" in settings.DATABASE_URL and "sslmode=" in settings.DATABASE_URL:
+    settings.DATABASE_URL = settings.DATABASE_URL.replace("sslmode=", "ssl=")
 
 
 def get_cors_origins() -> list[str]:

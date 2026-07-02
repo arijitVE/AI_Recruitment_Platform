@@ -410,11 +410,11 @@ export async function submitCandidateFeedback(
   }
 }
 
-export async function getDashboardStats(): Promise<DashboardStats> {
+export async function getDashboardStats(jobs?: Job[], cands?: Candidate[]): Promise<DashboardStats> {
   try {
-    const jobsList = await getJobs();
+    const jobsList = jobs || await getJobs();
     const activeJobsCount = jobsList.filter(j => j.status === "OPEN").length;
-    const candidatesList = await getCandidates();
+    const candidatesList = cands || await getCandidates();
     const totalApplicantsCount = candidatesList.length;
     
     const scored = candidatesList.filter(c => c.fitScore > 0);

@@ -17,6 +17,10 @@ from sqlalchemy.orm import relationship
 from app.database import Base
 
 
+def utc_now():
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
 class JobStatus(str, enum.Enum):
     OPEN = "open"
     CLOSED = "closed"
@@ -58,7 +62,7 @@ class Job(Base):
     profile_text = Column(Text, nullable=True)  # Rendered job requirement text
     pinecone_vector_id = Column(String(255), nullable=True)
     status = Column(SAEnum(JobStatus), default=JobStatus.OPEN, nullable=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    created_at = Column(DateTime, default=utc_now, nullable=False)
     created_by = Column(Integer, nullable=True)
 
     candidates = relationship("Candidate", back_populates="job", cascade="all, delete-orphan")
@@ -82,7 +86,7 @@ class Candidate(Base):
     pinecone_vector_id = Column(String(255), nullable=True)
     status = Column(SAEnum(CandidateStatus), default=CandidateStatus.UPLOADED, nullable=False, index=True)
     status_detail = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    created_at = Column(DateTime, default=utc_now, nullable=False)
 
     job = relationship("Job", back_populates="candidates")
     scores = relationship("Score", back_populates="candidate", cascade="all, delete-orphan")
@@ -102,7 +106,7 @@ class Score(Base):
     matched_skills = Column(JSON, default=list, nullable=False)
     missing_skills = Column(JSON, default=list, nullable=False)
     rationale = Column(Text, nullable=True)
-    scored_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    scored_at = Column(DateTime, default=utc_now, nullable=False)
 
     job = relationship("Job", back_populates="scores")
     candidate = relationship("Candidate", back_populates="scores")
@@ -116,7 +120,7 @@ class InterviewQuestion(Base):
     job_id = Column(Integer, ForeignKey("jobs.id", ondelete="CASCADE"), nullable=False, index=True)
     question_text = Column(Text, nullable=False)
     target_skill_gap = Column(String(255), nullable=True)
-    generated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    generated_at = Column(DateTime, default=utc_now, nullable=False)
 
     job = relationship("Job", back_populates="questions")
     candidate = relationship("Candidate", back_populates="questions")
@@ -130,7 +134,7 @@ class Feedback(Base):
     job_id = Column(Integer, ForeignKey("jobs.id", ondelete="CASCADE"), nullable=False, index=True)
     recruiter_notes = Column(Text, nullable=True)
     decision = Column(SAEnum(DecisionStatus), nullable=False)
-    recorded_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    recorded_at = Column(DateTime, default=utc_now, nullable=False)
     recorded_by = Column(Integer, nullable=True)
 
     job = relationship("Job", back_populates="feedback")
@@ -145,4 +149,4 @@ class AuditLog(Base):
     job_id = Column(Integer, ForeignKey("jobs.id", ondelete="SET NULL"), nullable=True, index=True)
     event = Column(String(255), nullable=False, index=True)
     payload_snapshot = Column(JSON, nullable=True)
-    timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    timestamp = Column(DateTime, default=utc_now, nullable=False)

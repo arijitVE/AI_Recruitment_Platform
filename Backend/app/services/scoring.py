@@ -4,7 +4,7 @@ from typing import List
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-from app.models import Job, Candidate, Score, CandidateStatus
+from app.models import Job, Candidate, Score, CandidateStatus, utc_now
 from app.schemas import SanitizedProfile
 from app.services.llm import evaluate_candidate_fit_llm, StrictScoringResult, get_client
 from app.services.worker import record_audit_log
@@ -83,7 +83,7 @@ async def run_stage2_scoring(db: AsyncSession, job: Job, candidate: Candidate, s
     score_record.matched_skills = eval_result.matched_skills
     score_record.missing_skills = eval_result.missing_skills
     score_record.rationale = eval_result.rationale
-    score_record.scored_at = datetime.now(timezone.utc)
+    score_record.scored_at = utc_now()
 
     candidate.status = CandidateStatus.COMPLETED
     await db.commit()

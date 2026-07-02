@@ -202,12 +202,13 @@ export default function RecruiterDashboard({
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [statsRes, jobsRes, candidatesRes, logsRes] = await Promise.all([
-        import("../api").then(m => m.getDashboardStats()),
-        import("../api").then(m => m.getJobs()),
-        import("../api").then(m => m.getCandidates()),
-        import("../api").then(m => m.getAuditLogs())
+      const api = await import("../api");
+      const [jobsRes, candidatesRes, logsRes] = await Promise.all([
+        api.getJobs(),
+        api.getCandidates(),
+        api.getAuditLogs()
       ]);
+      const statsRes = await api.getDashboardStats(jobsRes, candidatesRes);
 
       setStats(statsRes);
       setJobs(jobsRes);
@@ -350,7 +351,7 @@ export default function RecruiterDashboard({
       const rawPdfUrl = `/api/candidates/${cand.id}/raw-file`;
       try {
         const checkRes = await fetch(rawPdfUrl, { method: "HEAD" });
-        if (checkRes.ok && checkRes.headers.get("content-type")?.includes("pdf")) {
+        if (checkRes.ok) {
           setPdfModalCandidate({ cand: target, blobUrl: rawPdfUrl });
           return;
         }

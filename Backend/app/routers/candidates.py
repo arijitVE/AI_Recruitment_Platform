@@ -3,6 +3,7 @@ import logging
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, BackgroundTasks
+from fastapi.responses import RedirectResponse, FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
@@ -226,6 +227,35 @@ async def view_unredacted_resume(candidate_id: int, db: AsyncSession = Depends(g
         raise HTTPException(status_code=404, detail="Candidate not found")
     await record_audit_log(db, cand.id, cand.job_id, "recruiter_viewed_raw_resume", {"filename": cand.original_filename})
     return cand
+
+
+@router.api_route("/candidates/{candidate_id}/raw-file", methods=["GET", "HEAD"])
+async def get_candidate_raw_file(candidate_id: int, db: AsyncSession = Depends(get_db)):
+    """Serve candidate resume PDF/DOCX inline without downloading."""
+    res = await db.execute(select(Candidate).where(Candidate.id == candidate_id))
+    cand = res.scalar_one_or_none()
+    if not cand:
+        raise HTTPException(status_code=404, detail="Candidate not found")
+    
+    file_path = cand.raw_file_storage_path
+    filename = cand.original_filename or "resume.pdf"
+    media_type = "application/pdf" if filename.lower().endswith(".pdf") else "application/octet-stream"
+    headers = {"Content-Disposition": f'inline; filename="{filename}"'}
+
+    if file_path.startswith("http://") or file_path.startswith("https://"):
+        import httpx
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(file_path)
+            if resp.status_code != 200:
+                raise HTTPException(status_code=404, detail="Remote file not accessible")
+            from fastapi.responses import Response
+            return Response(content=resp.content, media_type=media_type, headers=headers)
+    
+    from pathlib import Path
+    if not Path(file_path).is_file():
+        raise HTTPException(status_code=404, detail="File missing on disk")
+    from fastapi.responses import Response
+    return Response(content=Path(file_path).read_bytes(), media_type=media_type, headers=headers)
 
 
 @router.post("/candidates/{candidate_id}/interview-questions", response_model=List[InterviewQuestionResponse])

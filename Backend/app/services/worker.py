@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from app.database import async_session_maker
-from app.models import Candidate, CandidateStatus, AuditLog, Job
+from app.models import Candidate, CandidateStatus, AuditLog, Job, utc_now
 from app.schemas import CandidateProfile, SanitizedProfile
 from app.services.parser import parse_resume_file
 from app.services.llm import extract_structured_profile
@@ -23,7 +23,7 @@ async def record_audit_log(db: AsyncSession, candidate_id: int, job_id: int, eve
         job_id=job_id,
         event=event,
         payload_snapshot=snapshot or {},
-        timestamp=datetime.now(timezone.utc)
+        timestamp=utc_now()
     )
     db.add(log)
     await db.commit()

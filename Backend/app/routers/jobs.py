@@ -83,3 +83,26 @@ async def get_job(job_id: int, db: AsyncSession = Depends(get_db)):
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     return job
+
+
+from pydantic import BaseModel
+class JobStatusUpdateRequest(BaseModel):
+    status: str
+
+@router.patch("/{job_id}/status")
+async def update_job_status(job_id: int, req: JobStatusUpdateRequest, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Job).where(Job.id == job_id))
+    job = result.scalar_one_or_none()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    upper_status = req.status.strip().upper()
+    try:
+        enum_val = JobStatus[upper_status]
+    except KeyError:
+        raise HTTPException(status_code=400, detail=f"Invalid status '{upper_status}'. Must be OPEN, DRAFT, or CLOSED.")
+    
+    job.status = enum_val
+    await db.commit()
+    await db.refresh(job)
+    return {"success": True, "id": str(job.id), "status": upper_status}
