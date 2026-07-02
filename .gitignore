@@ -44,7 +44,13 @@ Thumbs.db
 node_modules/
 .next/
 out/
-
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
 
 
 data

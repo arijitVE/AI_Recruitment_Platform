@@ -1,0 +1,120 @@
+@import "tailwindcss";
+
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
+
+@theme {
+  --color-background: #f8fafc;
+  --color-on-background: #0f172a;
+  
+  --color-surface: #ffffff;
+  --color-surface-dim: #f1f5f9;
+  --color-surface-bright: #ffffff;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f8fafc;
+  --color-surface-container: #f1f5f9;
+  --color-surface-container-high: #e2e8f0;
+  --color-surface-container-highest: #cbd5e1;
+  
+  --color-on-surface: #0f172a;
+  --color-on-surface-variant: #475569;
+  --color-inverse-surface: #0f172a;
+  --color-inverse-on-surface: #ffffff;
+  
+  --color-outline: #e2e8f0;
+  --color-outline-variant: #cbd5e1;
+  --color-surface-tint: #2563eb;
+  
+  --color-primary: #2563eb;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #dbeafe;
+  --color-on-primary-container: #1e40af;
+  --color-inverse-primary: #3b82f6;
+  
+  --color-secondary: #64748b;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #e2e8f0;
+  --color-on-secondary-container: #1e293b;
+  
+  --color-tertiary: #0d9488;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #ccfbf1;
+  --color-on-tertiary-container: #115e59;
+  
+  --color-error: #dc2626;
+  --color-on-error: #ffffff;
+  --color-error-container: #fee2e2;
+  --color-on-error-container: #991b1b;
+  
+  --font-sans: "Helvetica Neue", Arial, "Space Grotesk", sans-serif;
+  --font-mono: "Courier New", Courier, "JetBrains Mono", monospace;
+  --font-serif: "Georgia", serif;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-background);
+  color: var(--color-on-background);
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.01em;
+  margin: 0;
+  height: 100%;
+}
+
+/* Custom CSS for Bold Typography theme */
+.logo {
+  font-weight: 900 !important;
+  letter-spacing: -0.05em !important;
+  text-transform: uppercase !important;
+}
+
+.massive-text {
+  font-family: var(--font-sans);
+  font-weight: 900 !important;
+  line-height: 0.85 !important;
+  letter-spacing: -0.06em !important;
+  text-transform: uppercase !important;
+}
+
+.nav-meta {
+  font-family: var(--font-mono);
+  font-size: 0.75rem !important;
+  opacity: 0.5;
+  text-transform: uppercase !important;
+  letter-spacing: 0.2em !important;
+}
+
+.item-label {
+  font-family: var(--font-serif);
+  font-style: italic !important;
+  font-size: 0.75rem !important;
+  opacity: 0.6;
+}
+
+.item-value {
+  font-family: var(--font-sans);
+  font-weight: 900 !important;
+  letter-spacing: -0.04em !important;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: #f8fafc;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #2563eb;
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  display: inline-block;
+  vertical-align: middle;
+  line-height: 1;
+}

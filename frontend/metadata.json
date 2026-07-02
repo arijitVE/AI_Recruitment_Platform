@@ -1,0 +1,6 @@
+{
+  "name": "NextHire",
+  "description": "A privacy-first, bias-free recruitment dashboard featuring dynamic AI-powered resume sanitization, automated skill alignment matching, and interview question generation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
