@@ -1,8 +1,12 @@
 {
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "https://ai-recruitment-platform-mulr.onrender.com/:path*"
+      "source": "/api/(.*)",
+      "destination": "https://ai-recruitment-platform-mulr.onrender.com/$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }

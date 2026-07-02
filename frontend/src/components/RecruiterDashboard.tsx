@@ -348,7 +348,7 @@ export default function RecruiterDashboard({
       }
 
       // Check if actual raw PDF uploaded file is available on server
-      const rawPdfUrl = `/api/candidates/${cand.id}/raw-file`;
+      const rawPdfUrl = `${api.API_BASE}/candidates/${cand.id}/raw-file`;
       try {
         const checkRes = await fetch(rawPdfUrl, { method: "HEAD" });
         if (checkRes.ok) {

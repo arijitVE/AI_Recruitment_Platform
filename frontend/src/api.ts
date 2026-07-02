@@ -152,9 +152,13 @@ function mapCandidate(cand: any, scoreInfo?: any): Candidate {
 
 // ── API Service Calls ────────────────────────────────────────────────────────
 
+export const API_BASE = (import.meta as any).env?.VITE_API_URL
+  ? (import.meta as any).env.VITE_API_URL.replace(/\/$/, "")
+  : "/api";
+
 export async function getJobs(): Promise<Job[]> {
   try {
-    const res = await fetch("/api/jobs");
+    const res = await fetch(`${API_BASE}/jobs`);
     if (!res.ok) throw new Error("Failed to fetch jobs");
     const backendJobs = await res.json();
     
@@ -162,9 +166,9 @@ export async function getJobs(): Promise<Job[]> {
     const jobsList: Job[] = [];
     for (const j of backendJobs) {
       try {
-        const cRes = await fetch(`/api/jobs/${j.id}/candidates`);
+        const cRes = await fetch(`${API_BASE}/jobs/${j.id}/candidates`);
         const cands = cRes.ok ? await cRes.json() : [];
-        const rRes = await fetch(`/api/jobs/${j.id}/rankings`);
+        const rRes = await fetch(`${API_BASE}/jobs/${j.id}/rankings`);
         const ranks = rRes.ok ? await rRes.json() : [];
         const scored = ranks.filter((r: any) => r.fit_percentage > 0);
         const avgFit = scored.length > 0
@@ -197,7 +201,7 @@ export async function createJob(jobData: {
     const match = jobData.experience.match(/\d+/);
     const expYears = match ? parseInt(match[0], 10) : 5;
 
-    const res = await fetch("/api/jobs", {
+    const res = await fetch(`${API_BASE}/jobs`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -224,7 +228,7 @@ export async function getCandidates(jobId?: string): Promise<Candidate[]> {
     if (jobId) {
       targetJobIds = [jobId];
     } else {
-      const jRes = await fetch("/api/jobs");
+      const jRes = await fetch(`${API_BASE}/jobs`);
       if (jRes.ok) {
         const jobs = await jRes.json();
         targetJobIds = jobs.map((j: any) => String(j.id));
@@ -234,8 +238,8 @@ export async function getCandidates(jobId?: string): Promise<Candidate[]> {
     const allCandidates: Candidate[] = [];
     for (const jId of targetJobIds) {
       const [cRes, rRes] = await Promise.all([
-        fetch(`/api/jobs/${jId}/candidates`),
-        fetch(`/api/jobs/${jId}/rankings`)
+        fetch(`${API_BASE}/jobs/${jId}/candidates`),
+        fetch(`${API_BASE}/jobs/${jId}/rankings`)
       ]);
       if (!cRes.ok) continue;
       const cands = await cRes.json();
@@ -272,7 +276,7 @@ export async function uploadCandidateResume(
     const formData = new FormData();
     formData.append("file", uploadFile);
 
-    const res = await fetch(`/api/jobs/${jobId}/candidates`, {
+    const res = await fetch(`${API_BASE}/jobs/${jobId}/candidates`, {
       method: "POST",
       body: formData
     });
@@ -296,7 +300,7 @@ export async function uploadCandidateResume(
 
 export async function runMatchingEngine(jobId: string): Promise<boolean> {
   try {
-    const res = await fetch(`/api/jobs/${jobId}/match`, {
+    const res = await fetch(`${API_BASE}/jobs/${jobId}/match`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({})
@@ -314,7 +318,7 @@ export async function runMatchingEngine(jobId: string): Promise<boolean> {
 
 export async function unredactCandidateProfile(candId: string): Promise<Candidate | null> {
   try {
-    const res = await fetch(`/api/candidates/${candId}/resume`);
+    const res = await fetch(`${API_BASE}/candidates/${candId}/resume`);
     if (!res.ok) throw new Error("Failed to fetch unredacted resume");
     const detail = await res.json();
     logAuditAction("Recruiter Admin", "UNREDACT_PROFILE", `CANDIDATE #${candId}`, `Unlocked unredacted CV dossier. Compliance log recorded.`);
@@ -322,7 +326,7 @@ export async function unredactCandidateProfile(candId: string): Promise<Candidat
     // Fetch rank score info if possible
     let rankInfo = null;
     try {
-      const rRes = await fetch(`/api/jobs/${detail.job_id}/rankings`);
+      const rRes = await fetch(`${API_BASE}/jobs/${detail.job_id}/rankings`);
       if (rRes.ok) {
         const ranks = await rRes.json();
         rankInfo = ranks.find((r: any) => String(r.candidate_id) === String(candId));
@@ -338,7 +342,7 @@ export async function unredactCandidateProfile(candId: string): Promise<Candidat
 
 export async function generateCandidateQuestions(candId: string, numQuestions: number = 5): Promise<string[]> {
   try {
-    const res = await fetch(`/api/candidates/${candId}/interview-questions`, {
+    const res = await fetch(`${API_BASE}/candidates/${candId}/interview-questions`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ num_questions: numQuestions })
@@ -391,7 +395,7 @@ export async function submitCandidateFeedback(
   try {
     const decision = feedbackData.decision || "hired";
     const combinedNotes = `${feedbackData.interviewer} [Score: ${feedbackData.score}/10]: ${feedbackData.notes}`;
-    const res = await fetch(`/api/candidates/${candId}/feedback`, {
+    const res = await fetch(`${API_BASE}/candidates/${candId}/feedback`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -438,7 +442,7 @@ export async function getAuditLogs(): Promise<AuditLogEntry[]> {
 
 export async function updateJobStatus(jobId: string, status: string): Promise<boolean> {
   try {
-    const res = await fetch(`/api/jobs/${jobId}/status`, {
+    const res = await fetch(`${API_BASE}/jobs/${jobId}/status`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status })
