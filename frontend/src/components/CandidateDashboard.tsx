@@ -44,9 +44,10 @@ export default function CandidateDashboard({
   const [recentApplications, setRecentApplications] = useState<any[]>([]);
 
   useEffect(() => {
-    fetchJobs();
-    loadRecentApplications();
+    // Fire both in parallel — getCandidates uses the batch endpoint (single request)
+    Promise.all([fetchJobs(), loadRecentApplications()]);
   }, []);
+
 
   const fetchJobs = async () => {
     try {

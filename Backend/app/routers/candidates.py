@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import List
+from typing import List, Optional, Dict, Any
 
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, BackgroundTasks
 from fastapi.responses import RedirectResponse, FileResponse
@@ -118,6 +118,35 @@ async def retry_candidate_pipeline(
     logger.info("[Route] Retrying pipeline for candidate_id=%d", candidate_id)
     background_tasks.add_task(process_candidate_task, candidate_id)
     return cand
+
+
+@router.get("/candidates/batch")
+async def get_candidates_batch(job_id: Optional[int] = None, db: AsyncSession = Depends(get_db)):
+    """Return candidates along with their scoring ranking info in a single batch request to prevent N+1 queries."""
+    query = (
+        select(Candidate, Score)
+        .outerjoin(Score, Candidate.id == Score.candidate_id)
+    )
+    if job_id:
+        query = query.where(Candidate.job_id == job_id)
+    query = query.order_by(Candidate.created_at.desc())
+    
+    res = await db.execute(query)
+    results = []
+    for cand, score in res.all():
+        cand_dict = CandidateResponse.model_validate(cand).model_dump(mode="json")
+        rank_dict = {
+            "candidate_id": cand.id,
+            "original_filename": cand.original_filename,
+            "status": cand.status.value if hasattr(cand.status, "value") else str(cand.status),
+            "fit_percentage": score.fit_percentage if score and score.fit_percentage is not None else 0,
+            "vector_similarity_score": score.vector_similarity_score if score else None,
+            "matched_skills": score.matched_skills if score and score.matched_skills else [],
+            "missing_skills": score.missing_skills if score and score.missing_skills else [],
+            "rationale": score.rationale if score else None,
+        }
+        results.append({"cand": cand_dict, "rank": rank_dict})
+    return results
 
 
 @router.get("/jobs/{job_id}/candidates", response_model=List[CandidateResponse])

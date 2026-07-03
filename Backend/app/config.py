@@ -17,7 +17,8 @@ class Settings(BaseSettings):
     CORS_ORIGINS: str = "*"
     ALLOW_DEVELOPMENT_FALLBACKS: bool = False
     SUPABASE_URL: str = ""
-    SUPABASE_KEY: str = ""
+    SUPABASE_KEY: str = ""  # anon/publishable key (used by frontend)
+    SUPABASE_SERVICE_KEY: str = ""  # service_role key (used by backend — bypasses RLS)
     SUPABASE_STORAGE_BUCKET: str = "resumes"
 
     model_config = SettingsConfigDict(

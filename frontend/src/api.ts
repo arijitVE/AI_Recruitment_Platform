@@ -223,6 +223,33 @@ export async function createJob(jobData: {
 }
 
 export async function getCandidates(jobId?: string): Promise<Candidate[]> {
+  // Fast path: single batch endpoint — one SQL join, no N+1 loop
+  try {
+    const batchUrl = jobId
+      ? `${API_BASE}/candidates/batch?job_id=${jobId}`
+      : `${API_BASE}/candidates/batch`;
+    const bRes = await fetch(batchUrl);
+    if (bRes.ok) {
+      // Parse and map in a separate step so a mapCandidate error doesn't
+      // silently trigger the legacy fallback below.
+      const batchData: any[] = await bRes.json();
+      const mapped: Candidate[] = [];
+      for (const item of batchData) {
+        try {
+          mapped.push(mapCandidate(item.cand, item.rank));
+        } catch (mapErr) {
+          console.warn("mapCandidate failed for batch item, skipping:", mapErr, item);
+        }
+      }
+      return mapped;
+    }
+    console.warn(`Batch endpoint returned ${bRes.status}, falling back to per-job requests`);
+  } catch (fetchErr) {
+    // Only network/parse errors reach here — fall through to legacy path
+    console.warn("Batch candidates fetch failed, falling back:", fetchErr);
+  }
+
+  // Legacy fallback — only runs when the batch endpoint is unreachable or returns non-2xx
   try {
     let targetJobIds: string[] = [];
     if (jobId) {
@@ -245,7 +272,6 @@ export async function getCandidates(jobId?: string): Promise<Candidate[]> {
       const cands = await cRes.json();
       const ranks = rRes.ok ? await rRes.json() : [];
       const rankMap = new Map(ranks.map((r: any) => [String(r.candidate_id), r]));
-
       for (const c of cands) {
         const rankInfo = rankMap.get(String(c.id));
         allCandidates.push(mapCandidate(c, rankInfo));

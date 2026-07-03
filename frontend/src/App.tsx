@@ -1,12 +1,24 @@
 import React, { useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
-import { ShieldCheck, Briefcase, Sparkles, User, RefreshCw, Cpu } from "lucide-react";
+import { motion } from "motion/react";
+import { ShieldCheck, User, Cpu } from "lucide-react";
+
 import RecruiterDashboard from "./components/RecruiterDashboard";
 import CandidateDashboard from "./components/CandidateDashboard";
 
 export default function App() {
   const [portalMode, setPortalMode] = useState<"recruiter" | "candidate">("candidate");
   const [selectedJobId, setSelectedJobId] = useState<string | null>("job-1");
+  // Track whether recruiter portal has ever been activated so we don't mount it at initial load
+  // (avoids firing RecruiterDashboard's fetchData before the user visits it)
+  const [recruiterMounted, setRecruiterMounted] = useState(false);
+
+  const handleSwitchToRecruiter = () => {
+    setRecruiterMounted(true);
+    setPortalMode("recruiter");
+  };
+  const handleSwitchToCandidate = () => {
+    setPortalMode("candidate");
+  };
 
   return (
     <div className="flex flex-col h-screen w-screen bg-background text-on-background select-none overflow-hidden font-sans">
@@ -30,7 +42,7 @@ export default function App() {
         <div className="bg-slate-100 border border-slate-200 rounded-none p-1 flex items-center relative">
           <button 
             id="switch-to-candidate-mode"
-            onClick={() => setPortalMode("candidate")}
+            onClick={handleSwitchToCandidate}
             className={`relative px-4 py-1.5 text-xs font-bold uppercase tracking-wider rounded-none transition-colors cursor-pointer z-10 ${
               portalMode === "candidate" ? "text-white" : "text-slate-600 hover:text-slate-800"
             }`}
@@ -47,7 +59,7 @@ export default function App() {
           
           <button 
             id="switch-to-recruiter-mode"
-            onClick={() => setPortalMode("recruiter")}
+            onClick={handleSwitchToRecruiter}
             className={`relative px-4 py-1.5 text-xs font-bold uppercase tracking-wider rounded-none transition-colors cursor-pointer z-10 ${
               portalMode === "recruiter" ? "text-white" : "text-slate-600 hover:text-slate-800"
             }`}
@@ -75,43 +87,34 @@ export default function App() {
         </div>
       </header>
 
-      {/* Main Container View with Dynamic Transitions */}
+      {/* Main Container — both portals stay mounted; toggled with CSS display */}
       <div className="flex-1 overflow-hidden flex flex-col relative">
-        <AnimatePresence mode="wait">
-          {portalMode === "candidate" ? (
-            <motion.div 
-              key="candidate-view"
-              initial={{ opacity: 0, scale: 0.99 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.99 }}
-              transition={{ duration: 0.2 }}
-              className="flex-1 flex flex-col overflow-hidden"
-            >
-              <CandidateDashboard 
-                onSwitchToRecruiter={() => setPortalMode("recruiter")} 
-                selectedJobId={selectedJobId}
-                setSelectedJobId={setSelectedJobId}
-              />
-            </motion.div>
-          ) : (
-            <motion.div 
-              key="recruiter-view"
-              initial={{ opacity: 0, scale: 0.99 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.99 }}
-              transition={{ duration: 0.2 }}
-              className="flex-1 flex flex-col overflow-hidden"
-            >
-              <RecruiterDashboard 
-                onSwitchToCandidate={() => setPortalMode("candidate")} 
-                selectedJobId={selectedJobId}
-                setSelectedJobId={setSelectedJobId}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {/* Candidate Portal — always mounted after first load */}
+        <div
+          className="flex-1 flex flex-col overflow-hidden"
+          style={{ display: portalMode === "candidate" ? "flex" : "none" }}
+        >
+          <CandidateDashboard 
+            onSwitchToRecruiter={handleSwitchToRecruiter} 
+            selectedJobId={selectedJobId}
+            setSelectedJobId={setSelectedJobId}
+          />
+        </div>
+
+        {/* Recruiter Portal — lazy-mounted on first visit, then kept alive */}
+        {recruiterMounted && (
+          <div
+            className="flex-1 flex flex-col overflow-hidden"
+            style={{ display: portalMode === "recruiter" ? "flex" : "none" }}
+          >
+            <RecruiterDashboard 
+              onSwitchToCandidate={handleSwitchToCandidate} 
+              selectedJobId={selectedJobId}
+              setSelectedJobId={setSelectedJobId}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
 }
-
